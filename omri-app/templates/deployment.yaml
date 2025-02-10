@@ -26,7 +26,7 @@ spec:
           command: ["sh", "-c"]
           args:
             - >
-              aws secretsmanager get-secret-value --secret-id '{{ .Values.database.secretArn }}' --query 'SecretString' --output text > /mnt/secrets/db_credentials;
+              echo "container started" && echo {{ .Values.database.secretArn }} && aws secretsmanager get-secret-value --secret-id '{{ .Values.database.secretArn }}' --query 'SecretString' --output text > /mnt/secrets/db_credentials;
           volumeMounts:
             - name: secret-volume
               mountPath: /mnt/secrets
