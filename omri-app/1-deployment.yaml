@@ -4,6 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world-deployment
+  namespace: argocd
 spec:
   selector:
     matchLabels:
@@ -26,6 +27,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: hello-world-service
+  namespace: argocd
 spec:
   selector:
     app: hello-world
