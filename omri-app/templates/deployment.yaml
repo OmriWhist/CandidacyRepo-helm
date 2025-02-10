@@ -1,78 +1,54 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "omri-app.fullname" . }}
+  name: {{ .Release.Name }}
+  namespace: {{ .Values.namespace | default "default" }}
   labels:
-    {{- include "omri-app.labels" . | nindent 4 }}
+    app: {{ .Release.Name }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
-      {{- include "omri-app.selectorLabels" . | nindent 6 }}
+      app: {{ .Release.Name }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-        {{- include "omri-app.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        app: {{ .Release.Name }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "omri-app.serviceAccountName" . }}
-      {{- with .Values.podSecurityContext }}
-      securityContext:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      containers:
-        - name: {{ .Chart.Name }}
-          {{- with .Values.securityContext }}
-          securityContext:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
-          {{- with .Values.livenessProbe }}
-          livenessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.readinessProbe }}
-          readinessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.volumeMounts }}
-          volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-      {{- with .Values.volumes }}
+      serviceAccountName: {{ .Release.Name }}-service-account
+      terminationGracePeriodSeconds: 0
       volumes:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        - name: secret-volume
+          emptyDir: {}
+      initContainers:
+        - name: fetch-db-credentials
+          image: amazon/aws-cli:latest
+          command: ["sh", "-c"]
+          args:
+            - >
+              aws secretsmanager get-secret-value --secret-id '{{ .Values.database.secretArn }}' --query 'SecretString' --output text > /mnt/secrets/db_credentials;
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /mnt/secrets
+      containers:
+        - name: {{ .Release.Name }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /mnt/secrets
+          env:
+            - name: DB_HOST
+              value: {{ .Values.database.host }}
+            - name: MYSQL_DATABASE
+              value: {{ .Values.database.name }}
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "starting container"
+              DB_CREDENTIALS=$(cat /mnt/secrets/db_credentials)
+              export DB_CREDENTIALS
+              echo "DB_CREDENTIALS loaded"
+              exec python3 main.py
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
