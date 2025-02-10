@@ -11,6 +11,9 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "ShowIps-main-780422a"
 
+ingress:
+  enabled: false
+
 database:
   host: "omritfeksdefaultdb.c2jxc1xgojip.us-west-1.rds.amazonaws.com"
   name: "omritfeksdefaultdb"
