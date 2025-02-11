@@ -12,7 +12,11 @@ image:
   tag: "ShowIps-main-780422a"
 
 ingress:
-  enabled: false
+  enabled: true
+
+service:
+  port: 80
+  targetPort: 80
 
 database:
   host: "omritfeksdefaultdb.c2jxc1xgojip.us-west-1.rds.amazonaws.com"
