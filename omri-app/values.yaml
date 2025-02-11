@@ -9,7 +9,7 @@ namespace: dev
 image:
   repository: 930354804502.dkr.ecr.us-west-1.amazonaws.com/omri/omrirepo
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "ShowIps-main-780422a"
+  tag: ShowIps-main-a257e88
 
 ingress:
   enabled: true
